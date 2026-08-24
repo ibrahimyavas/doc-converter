@@ -6,11 +6,11 @@ frontend, FastAPI backend, light/dark theming, pastel design system.
 
 | Category | Formats | Mode | How |
 |---|---|---|---|
-| Documents | PDF, Word, Text, PowerPoint, JPEG, Excel | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Documents | PDF, Word, Text, PowerPoint, JPEG, Excel, HTML, RTF, EPUB, OpenDocument | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
 | Spreadsheets | Excel, CSV, JSON, SQL | 🟢 Live | Parsed/generated fully client-side via `xlsx` |
 | Images | JPEG, PNG, WEBP, BMP | 🟢 Live | Re-encoded fully client-side via `<canvas>` (BMP hand-encoded — no browser supports BMP export natively) |
-| Video | MP4, MOV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
-| Audio | MP3, WAV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Video | MP4, MOV, WEBM, MKV, AVI, GIF | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Audio | MP3, WAV, M4A, FLAC, OGG | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
 
 There's also a **Compress** section (same format in, smaller file out):
 

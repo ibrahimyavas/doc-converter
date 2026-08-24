@@ -19,8 +19,15 @@ export default function FeatureGrid() {
                 <div className="feature-card-icon">
                   <Icon size={20} />
                 </div>
-                <h3>{c.formats.map((f) => f.label).join(" ⇄ ")}</h3>
+                <h3>{c.label}</h3>
                 <p>{c.description}</p>
+                <p className="caption" style={{ marginTop: "var(--space-xs)" }}>
+                  {c.formats
+                    .slice(0, 4)
+                    .map((f) => f.label)
+                    .join(" ⇄ ")}
+                  {c.formats.length > 4 ? ` +${c.formats.length - 4} more` : ""}
+                </p>
                 <span className="badge-pill">
                   <span className={`mode-dot ${c.mode}`} style={{ marginRight: 2 }} />
                   {c.mode === "live" ? "Live" : "Cloud"}

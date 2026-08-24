@@ -19,7 +19,7 @@ export const CATEGORIES = [
     label: "Documents",
     icon: "FileText",
     mode: "cloud",
-    description: "PDF, Word, slides, text, JPG, and Excel, any direction.",
+    description: "PDF, Word, slides, text, ebooks, and more, any direction.",
     formats: [
       { ext: "pdf", label: "PDF", accept: ".pdf" },
       { ext: "docx", label: "Word", accept: ".docx,.doc" },
@@ -27,6 +27,10 @@ export const CATEGORIES = [
       { ext: "pptx", label: "PowerPoint", accept: ".pptx,.ppt" },
       { ext: "jpg", label: "JPEG", accept: ".jpg,.jpeg" },
       { ext: "xlsx", label: "Excel", accept: ".xlsx,.xls" },
+      { ext: "html", label: "HTML", accept: ".html,.htm" },
+      { ext: "rtf", label: "RTF", accept: ".rtf" },
+      { ext: "epub", label: "EPUB", accept: ".epub" },
+      { ext: "odt", label: "OpenDocument", accept: ".odt" },
     ],
   },
   {
@@ -60,10 +64,14 @@ export const CATEGORIES = [
     label: "Video",
     icon: "Video",
     mode: "cloud",
-    description: "MP4 and MOV containers, both directions.",
+    description: "MP4, MOV, WEBM, MKV, AVI, and GIF, any direction.",
     formats: [
       { ext: "mp4", label: "MP4", accept: ".mp4" },
       { ext: "mov", label: "MOV", accept: ".mov" },
+      { ext: "webm", label: "WEBM", accept: ".webm" },
+      { ext: "mkv", label: "MKV", accept: ".mkv" },
+      { ext: "avi", label: "AVI", accept: ".avi" },
+      { ext: "gif", label: "GIF", accept: ".gif" },
     ],
   },
   {
@@ -71,10 +79,13 @@ export const CATEGORIES = [
     label: "Audio",
     icon: "Music",
     mode: "cloud",
-    description: "MP3 and WAV, both directions.",
+    description: "MP3, WAV, M4A, FLAC, and OGG, any direction.",
     formats: [
       { ext: "mp3", label: "MP3", accept: ".mp3" },
       { ext: "wav", label: "WAV", accept: ".wav" },
+      { ext: "m4a", label: "M4A", accept: ".m4a" },
+      { ext: "flac", label: "FLAC", accept: ".flac" },
+      { ext: "ogg", label: "OGG", accept: ".ogg" },
     ],
   },
 ];
