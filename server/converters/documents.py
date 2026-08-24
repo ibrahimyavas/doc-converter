@@ -26,11 +26,18 @@ import shutil
 import uuid
 from pathlib import Path
 
+from docx import Document
 from PIL import Image
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
 from .tools import ConversionError, find_tool, run
+
+# Default font for every DOCX/PPTX this module produces. LibreOffice's own
+# default (Liberation Serif/Sans depending on locale) reads as slightly
+# off in Word; Times New Roman is the safer, universally-available choice
+# for a generated document with no original styling to preserve.
+DEFAULT_FONT = "Times New Roman"
 
 # Formats LibreOffice converts between directly via --convert-to.
 LIBREOFFICE_EXTS = {"pdf", "docx", "txt", "pptx", "xlsx", "html", "rtf", "odt", "epub"}
@@ -171,10 +178,25 @@ def _text_to_pptx(txt_path: str, workdir: str) -> str:
         tf.word_wrap = True
         tf.text = chunk
         tf.paragraphs[0].font.size = Pt(18)
+        tf.paragraphs[0].font.name = DEFAULT_FONT
 
     out_path = os.path.join(workdir, f"{uuid.uuid4().hex}.pptx")
     prs.save(out_path)
     return out_path
+
+
+def _apply_default_docx_font(docx_path: str, font_name: str = DEFAULT_FONT) -> None:
+    """Sets `font_name` on the Normal style (what most paragraphs inherit)
+    and on every run directly (belt-and-suspenders — some viewers honor
+    run-level rFonts over the style when both are present, so setting only
+    one can leave the rendered font inconsistent).
+    """
+    doc = Document(docx_path)
+    doc.styles["Normal"].font.name = font_name
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            run.font.name = font_name
+    doc.save(docx_path)
 
 
 def _pdf_to_document(pdf_path: str, to_ext: str, workdir: str) -> str:
@@ -200,6 +222,17 @@ def convert_document(input_path: str, from_ext: str, to_ext: str, workdir: str) 
     — the caller owns workdir and should remove it (as a whole, e.g.
     shutil.rmtree) once the file's been used.
     """
+    produced = _convert_document(input_path, from_ext, to_ext, workdir)
+    if to_ext == "docx":
+        # Applies regardless of which path above produced the file — the
+        # font is otherwise whatever LibreOffice's locale-default happens
+        # to be, which reads as slightly off compared to a document
+        # someone actually formatted themselves.
+        _apply_default_docx_font(produced)
+    return produced
+
+
+def _convert_document(input_path: str, from_ext: str, to_ext: str, workdir: str) -> str:
     if from_ext == "jpg" and to_ext == "pdf":
         return _jpg_to_pdf(input_path, workdir)
     if from_ext == "pdf" and to_ext == "jpg":

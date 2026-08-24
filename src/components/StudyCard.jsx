@@ -38,18 +38,21 @@ function renderMarkdownLite(text) {
       flushList();
       return;
     }
-    if (line.startsWith("## ")) {
+    // Matches any markdown heading depth (#, ##, ###, ...) — the model
+    // isn't shy about going to ### for subsections, and anything past ##
+    // was previously falling through to plain-paragraph rendering with
+    // the literal "###" left in the text.
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
       flushList();
+      const depth = heading[1].length;
       blocks.push(
-        <h4 key={i} style={{ marginBottom: 6, marginTop: blocks.length ? 16 : 0 }}>
-          {renderInline(line.slice(3))}
-        </h4>
-      );
-    } else if (line.startsWith("# ")) {
-      flushList();
-      blocks.push(
-        <h4 key={i} className="title-md" style={{ marginBottom: 6, marginTop: blocks.length ? 16 : 0 }}>
-          {renderInline(line.slice(2))}
+        <h4
+          key={i}
+          className={depth >= 3 ? "title-md" : undefined}
+          style={{ marginBottom: 6, marginTop: blocks.length ? 16 : 0 }}
+        >
+          {renderInline(heading[2])}
         </h4>
       );
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
