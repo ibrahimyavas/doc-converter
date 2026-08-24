@@ -98,7 +98,12 @@ def _run_job(input_path: str, original_filename: str, process_task: dict, out_ex
         os.unlink(out_path)
         raise
 
-    out_filename = remote.get("filename") or f"{Path(original_filename).stem}.{out_ext}"
+    # Prefer a name derived from what the user actually uploaded over
+    # whatever CloudConvert names the export — it's sometimes a generic
+    # temp-file name (e.g. "tmpby5t7nv9.docx") rather than the source name.
+    out_filename = f"{Path(original_filename).stem}.{out_ext}" if original_filename else remote.get("filename")
+    if not out_filename:
+        out_filename = f"converted.{out_ext}"
     return out_path, out_filename
 
 
