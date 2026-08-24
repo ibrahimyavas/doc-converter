@@ -51,15 +51,16 @@
   --radius-xl: 16px;
   --radius-pill: 9999px;
 
-  /* spacing */
+  /* spacing — compact scale: everything below cascades from these tokens,
+     so tightening the scale here tightens the whole page consistently. */
   --space-xxs: 4px;
-  --space-xs: 8px;
-  --space-sm: 12px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-xxl: 48px;
-  --space-section: 96px;
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 14px;
+  --space-lg: 18px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-section: 64px;
 }
 
 :root[data-theme="dark"] {
@@ -210,7 +211,7 @@ a {
    Top nav
    ========================================================================== */
 .top-nav {
-  height: 64px;
+  height: 56px;
   background: var(--color-canvas);
   display: flex;
   align-items: center;
@@ -252,8 +253,8 @@ a {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  height: 40px;
-  padding: 0 20px;
+  height: 36px;
+  padding: 0 16px;
   border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 500;
@@ -407,11 +408,11 @@ a {
   color: var(--color-ink);
   border: none;
   border-radius: var(--radius-pill);
-  padding: 10px 34px 10px 22px;
+  padding: 8px 30px 8px 18px;
   font-family: var(--font-body);
   font-weight: 500;
   font-size: 15px;
-  min-width: 130px;
+  min-width: 110px;
   text-align: center;
   text-align-last: center;
   cursor: pointer;
@@ -447,14 +448,14 @@ a {
   width: 100%;
   text-align: left;
   text-align-last: left;
-  padding: 10px 34px 10px 14px;
+  padding: 8px 30px 8px 12px;
   min-width: 0;
 }
 
 .quality-slider {
   width: 100%;
   accent-color: var(--color-primary);
-  height: 36px;
+  height: 32px;
 }
 
 .level-row {
@@ -661,8 +662,8 @@ a {
 }
 
 .feature-card-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-md);
   background: var(--color-canvas);
   display: inline-flex;
@@ -701,7 +702,7 @@ a {
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-radius: var(--radius-lg);
-  padding: 64px;
+  padding: 44px;
   text-align: center;
 }
 .cta-band h2 {
@@ -723,7 +724,7 @@ a {
 .footer {
   background: var(--color-surface-dark);
   color: var(--color-on-dark-soft);
-  padding: 64px 0;
+  padding: 44px 0;
   margin-top: var(--space-section);
 }
 .footer-top {
