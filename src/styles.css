@@ -9,37 +9,40 @@
    mode since the dark-mode primary is a brighter, lighter lavender.
    ========================================================================== */
 :root {
-  /* colors — light (default) */
-  --color-primary: #7259e6;
-  --color-primary-active: #5d45cc;
-  --color-primary-disabled: #e4defb;
-  --color-ink: #2b2740;
-  --color-body: #5e5875;
-  --color-body-strong: #362f4d;
-  --color-muted: #8d87a3;
-  --color-muted-soft: #b2acc5;
-  --color-hairline: #e9e3f8;
-  --color-hairline-soft: #f2edfa;
+  /* colors — light (default), softened: primary desaturated toward a
+     gentler periwinkle, ink/body lifted off near-black, accents lightened. */
+  --color-primary: #8171d9;
+  --color-primary-active: #6a5ac2;
+  --color-primary-disabled: #e8e3f7;
+  --color-ink: #3a3555;
+  --color-body: #6b6485;
+  --color-body-strong: #443e63;
+  --color-muted: #9995ab;
+  --color-muted-soft: #bcb7cc;
+  --color-hairline: #eae5f8;
+  --color-hairline-soft: #f3eefb;
   --color-canvas: #fcfaff;
-  --color-surface-soft: #f5f1fd;
-  --color-surface-card: #eee7fc;
-  --color-surface-cream-strong: #e5daf9;
-  --color-surface-dark: #332c4d;
-  --color-surface-dark-elevated: #3e3560;
-  --color-surface-dark-soft: #382f58;
+  --color-surface-soft: #f6f2fd;
+  --color-surface-card: #efe9fc;
+  --color-surface-cream-strong: #e7ddf9;
+  --color-surface-dark: #3d3657;
+  --color-surface-dark-elevated: #473c6b;
+  --color-surface-dark-soft: #423664;
   --color-on-primary: #ffffff;
   --color-on-dark: #f7f3ff;
-  --color-on-dark-soft: #b7add1;
-  --color-accent-teal: #8fe3d3;
-  --color-accent-amber: #ffd199;
-  --color-accent-lime: #d9f5a0;
-  --color-success: #86e0a8;
-  --color-warning: #ffd873;
-  --color-error: #e8544a;
+  --color-on-dark-soft: #beb3d8;
+  --color-accent-teal: #a6ecdd;
+  --color-accent-amber: #ffdbae;
+  --color-accent-lime: #e4f7b8;
+  --color-success: #a0e8ba;
+  --color-warning: #ffdf9e;
+  --color-error: #ea7f77;
   --color-error-bg: #fdebea;
 
-  /* typography */
-  --font-display: "Space Grotesk", "Inter", -apple-system, sans-serif;
+  /* typography — Bricolage Grotesque for display: distinctive, bold
+     geometric character, different flavor from the earlier Space
+     Grotesk pass. Inter stays for body/UI, JetBrains Mono for code. */
+  --font-display: "Bricolage Grotesque", "Inter", -apple-system, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-code: "JetBrains Mono", ui-monospace, monospace;
 
@@ -64,34 +67,35 @@
 }
 
 :root[data-theme="dark"] {
-  --color-primary: #a594ff;
-  --color-primary-active: #8c78f2;
-  --color-primary-disabled: #392f55;
-  --color-ink: #f5f1ff;
-  --color-body: #cfc7e6;
-  --color-body-strong: #ede8fa;
-  --color-muted: #9c93b8;
-  --color-muted-soft: #78708f;
-  --color-hairline: #362f4e;
-  --color-hairline-soft: #2c2640;
-  --color-canvas: #17132a;
-  --color-surface-soft: #1e1936;
-  --color-surface-card: #241e40;
-  --color-surface-cream-strong: #2c2450;
-  --color-surface-dark: #2a2348;
-  --color-surface-dark-elevated: #362d57;
-  --color-surface-dark-soft: #302848;
+  /* softened: less neon lavender, warmer/dimmer neutrals */
+  --color-primary: #b0a3f5;
+  --color-primary-active: #9a8ce8;
+  --color-primary-disabled: #3a3255;
+  --color-ink: #ede8f9;
+  --color-body: #c4bcdb;
+  --color-body-strong: #e2ddf1;
+  --color-muted: #9891ac;
+  --color-muted-soft: #756e88;
+  --color-hairline: #35304a;
+  --color-hairline-soft: #2b273e;
+  --color-canvas: #1a1730;
+  --color-surface-soft: #201c3a;
+  --color-surface-card: #29234a;
+  --color-surface-cream-strong: #322a58;
+  --color-surface-dark: #2e2751;
+  --color-surface-dark-elevated: #3a3163;
+  --color-surface-dark-soft: #352c5c;
   /* Dark-mode primary is a bright, light lavender — dark text reads far
      better on it than white does. */
-  --color-on-primary: #1b1730;
-  --color-on-dark: #f5f1ff;
-  --color-on-dark-soft: #b7add1;
-  --color-accent-teal: #a8f0dd;
-  --color-accent-amber: #ffddae;
-  --color-accent-lime: #e3ffae;
-  --color-success: #a0efc0;
-  --color-warning: #ffe49e;
-  --color-error: #ff9c95;
+  --color-on-primary: #211c38;
+  --color-on-dark: #f0ecfa;
+  --color-on-dark-soft: #beb3d8;
+  --color-accent-teal: #b3ecdf;
+  --color-accent-amber: #ffdfb8;
+  --color-accent-lime: #e9f7c0;
+  --color-success: #ade8c0;
+  --color-warning: #ffe4ab;
+  --color-error: #ffaba5;
   --color-error-bg: #3d2230;
 }
 
