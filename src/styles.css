@@ -101,7 +101,14 @@
 html,
 body,
 #root {
-  height: 100%;
+  /* min-height, not height: a fixed height caps #root at exactly the
+     viewport — and since #root is .top-nav's containing block,
+     `position: sticky` can only stay stuck within that box. On any page
+     taller than one screen (i.e. always), the sticky nav falls off the
+     bottom of its own 100vh-tall containing block a moment after you
+     start scrolling. min-height keeps "at least one full screen" without
+     capping how tall #root can grow. */
+  min-height: 100%;
 }
 
 body {
@@ -419,6 +426,42 @@ a {
   right: 14px;
   color: var(--color-muted);
   pointer-events: none;
+}
+
+/* ==========================================================================
+   Compress controls
+   ========================================================================== */
+.compress-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.compress-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.compress-control .format-select {
+  width: 100%;
+  text-align: left;
+  text-align-last: left;
+  padding: 10px 34px 10px 14px;
+  min-width: 0;
+}
+
+.quality-slider {
+  width: 100%;
+  accent-color: var(--color-primary);
+  height: 36px;
+}
+
+.level-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
 }
 
 .swap-btn {
@@ -786,5 +829,8 @@ a {
   .file-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .compress-controls {
+    grid-template-columns: 1fr;
   }
 }

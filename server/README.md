@@ -1,13 +1,13 @@
 # doc-converter backend
 
 A small FastAPI service that converts the frontend's "cloud" categories —
-**Documents** (PDF/Word/Text/PowerPoint), **Video** (MP4/MOV), and
-**Audio** (MP3/WAV) — via the [CloudConvert](https://cloudconvert.com)
-API. `/api/convert` is generic (it just forwards whatever `to_ext` it's
-given to CloudConvert), so adding more formats to those categories on
-the frontend needs no backend changes. The frontend's "live" categories
-(Spreadsheets, Images) stay fully client-side and never touch this
-server.
+**Documents** (PDF/Word/Text/PowerPoint/JPEG/Excel), **Video** (MP4/MOV),
+and **Audio** (MP3/WAV) — plus PDF/video **compression**, all via the
+[CloudConvert](https://cloudconvert.com) API. `/api/convert` is generic
+(it just forwards whatever `to_ext` it's given to CloudConvert), so
+adding more formats to those categories on the frontend needs no backend
+changes. The frontend's "live" categories (Spreadsheets, Images, and
+image compression) stay fully client-side and never touch this server.
 
 ## Setup
 
@@ -55,9 +55,28 @@ frontend surfaces that as an inline error rather than failing silently.
 | `filename` | text | original filename (with extension) |
 | `to_ext` | text | target extension, e.g. `docx`, `pdf`, `mov`, `mp4` |
 
-Returns the converted file as a binary response with
+`POST /api/compress` — same-format-in, smaller-out. Multipart form:
+
+| field | type | description |
+|---|---|---|
+| `file` | file | the file to shrink |
+| `filename` | text | original filename (with extension) |
+| `category` | text | `pdf` or `video` |
+| `level` | text | `light` or `strong` |
+
+Both return the file as a binary response with
 `Content-Disposition: attachment`, or a JSON `{"detail": "..."}` error
 body on failure (`501` not configured, `502` CloudConvert error).
+
+## Troubleshooting
+
+**CORS error in the browser console, request never completes.** Browsers
+treat `http://localhost:5173` and `http://127.0.0.1:5173` as different
+origins even though they're the same dev server — `CORS_ORIGIN` must
+list whichever one the frontend is actually loaded from (the `.env.example`
+default lists both). If you changed Vite's `server.host`, or your OS
+resolves `localhost` differently, update `CORS_ORIGIN` to match the exact
+URL in your browser's address bar and restart the backend.
 
 ## Docker
 

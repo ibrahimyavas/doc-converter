@@ -11,6 +11,7 @@ export default function Header() {
         </a>
         <nav className="nav-links">
           <a href="#converter">Converter</a>
+          <a href="#compress">Compress</a>
           <a href="#formats">Formats</a>
           <a href="#faq">FAQ</a>
         </nav>

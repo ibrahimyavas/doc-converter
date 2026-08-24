@@ -6,11 +6,19 @@ frontend, FastAPI backend, light/dark theming, pastel design system.
 
 | Category | Formats | Mode | How |
 |---|---|---|---|
-| Documents | PDF, Word, Text, PowerPoint | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Documents | PDF, Word, Text, PowerPoint, JPEG, Excel | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
 | Spreadsheets | Excel, CSV, JSON, SQL | 🟢 Live | Parsed/generated fully client-side via `xlsx` |
 | Images | JPEG, PNG, WEBP, BMP | 🟢 Live | Re-encoded fully client-side via `<canvas>` (BMP hand-encoded — no browser supports BMP export natively) |
 | Video | MP4, MOV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
 | Audio | MP3, WAV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+
+There's also a **Compress** section (same format in, smaller file out):
+
+| Category | Mode | How |
+|---|---|---|
+| Images | 🟢 Live | Re-encode at a chosen quality/max-dimension via `<canvas>` |
+| PDF | 🔵 Cloud | CloudConvert's `optimize` task (`web`/`max` profiles) |
+| Video | 🔵 Cloud | CloudConvert `convert` with a reduced target bitrate |
 
 ## Structure
 
@@ -32,8 +40,8 @@ cp .env.example .env   # optional — defaults to http://localhost:8787
 npm run dev             # http://localhost:5173
 ```
 
-**Backend** (only needed for the PDF⇄Word / MP4⇄MOV pairs — see
-[server/README.md](server/README.md) for full setup):
+**Backend** (only needed for the "Cloud" categories/compress targets above
+— see [server/README.md](server/README.md) for full setup):
 
 ```bash
 cd server

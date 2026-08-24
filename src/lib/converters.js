@@ -19,12 +19,14 @@ export const CATEGORIES = [
     label: "Documents",
     icon: "FileText",
     mode: "cloud",
-    description: "PDF, Word, plain text, and slides, any direction.",
+    description: "PDF, Word, slides, text, JPG, and Excel, any direction.",
     formats: [
       { ext: "pdf", label: "PDF", accept: ".pdf" },
       { ext: "docx", label: "Word", accept: ".docx,.doc" },
       { ext: "txt", label: "Text", accept: ".txt" },
       { ext: "pptx", label: "PowerPoint", accept: ".pptx,.ppt" },
+      { ext: "jpg", label: "JPEG", accept: ".jpg,.jpeg" },
+      { ext: "xlsx", label: "Excel", accept: ".xlsx,.xls" },
     ],
   },
   {
@@ -74,6 +76,44 @@ export const CATEGORIES = [
       { ext: "mp3", label: "MP3", accept: ".mp3" },
       { ext: "wav", label: "WAV", accept: ".wav" },
     ],
+  },
+];
+
+// Compression is a different shape from conversion: same format in, same
+// (or a chosen lossy) format out, just smaller. So it gets its own list —
+// a single accepted-input spec plus either a quality control (images,
+// live) or a light/strong level (PDF/video, cloud).
+export const COMPRESS_CATEGORIES = [
+  {
+    id: "images",
+    label: "Images",
+    icon: "Image",
+    mode: "live",
+    description: "Re-encode at a lower quality, fully in your browser.",
+    accept: ".jpg,.jpeg,.png,.webp,.bmp",
+    // Output choices only — BMP is uncompressed, so it's a fine input but
+    // a pointless compression target.
+    outputFormats: [
+      { ext: "jpg", label: "JPEG" },
+      { ext: "webp", label: "WEBP" },
+      { ext: "png", label: "PNG" },
+    ],
+  },
+  {
+    id: "pdf",
+    label: "PDF",
+    icon: "FileText",
+    mode: "cloud",
+    description: "Shrink file size via CloudConvert's PDF optimizer.",
+    accept: ".pdf",
+  },
+  {
+    id: "video",
+    label: "Video",
+    icon: "Video",
+    mode: "cloud",
+    description: "Re-encode at a lower bitrate via CloudConvert.",
+    accept: ".mp4,.mov",
   },
 ];
 
@@ -141,7 +181,11 @@ function encodeBmp(imageData) {
 
 const CANVAS_MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
-function convertImage(file, toExt, onProgress) {
+// Decode `file` into a same-size <canvas>, optionally flattened onto white
+// (needed before encoding to a format with no alpha channel, i.e. JPEG).
+// Shared by convertImage (format A -> B) and compressImage (format A ->
+// smaller format A, or a chosen output format at a lower quality).
+function renderToCanvas(file, { flattenWhite = false, maxDimension } = {}, onProgress) {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const reader = new FileReader();
@@ -150,37 +194,22 @@ function convertImage(file, toExt, onProgress) {
       onProgress?.(35);
       img.onload = () => {
         onProgress?.(65);
+        let { naturalWidth: w, naturalHeight: h } = img;
+        if (maxDimension && Math.max(w, h) > maxDimension) {
+          const scale = maxDimension / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
         const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext("2d");
-        if (toExt === "jpg") {
-          // JPEG has no alpha channel — flatten onto white first.
+        if (flattenWhite) {
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillRect(0, 0, w, h);
         }
-        ctx.drawImage(img, 0, 0);
-
-        if (toExt === "bmp") {
-          try {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            onProgress?.(100);
-            resolve(encodeBmp(imageData));
-          } catch (err) {
-            reject(new Error(`Could not encode BMP: ${err.message}`));
-          }
-          return;
-        }
-
-        canvas.toBlob(
-          (blob) => {
-            onProgress?.(100);
-            if (!blob) return reject(new Error(`Your browser can't export ${toExt.toUpperCase()} images.`));
-            resolve(blob);
-          },
-          CANVAS_MIME[toExt],
-          0.92
-        );
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ canvas, ctx });
       };
       img.onerror = () => reject(new Error("Could not decode the image file."));
       img.src = reader.result;
@@ -188,6 +217,43 @@ function convertImage(file, toExt, onProgress) {
     onProgress?.(10);
     reader.readAsDataURL(file);
   });
+}
+
+function encodeCanvas(canvas, ctx, toExt, quality, onProgress) {
+  return new Promise((resolve, reject) => {
+    if (toExt === "bmp") {
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        onProgress?.(100);
+        resolve(encodeBmp(imageData));
+      } catch (err) {
+        reject(new Error(`Could not encode BMP: ${err.message}`));
+      }
+      return;
+    }
+    canvas.toBlob(
+      (blob) => {
+        onProgress?.(100);
+        if (!blob) return reject(new Error(`Your browser can't export ${toExt.toUpperCase()} images.`));
+        resolve(blob);
+      },
+      CANVAS_MIME[toExt],
+      quality
+    );
+  });
+}
+
+async function convertImage(file, toExt, onProgress) {
+  const { canvas, ctx } = await renderToCanvas(file, { flattenWhite: toExt === "jpg" }, onProgress);
+  return encodeCanvas(canvas, ctx, toExt, 0.92, onProgress);
+}
+
+// Quality/downscale-driven re-encode — same idea as convertImage, but the
+// caller picks the quality (and PNG/BMP inputs can be re-targeted to a
+// lossy format, since neither compresses meaningfully as itself).
+async function compressImage(file, toExt, quality, maxDimension, onProgress) {
+  const { canvas, ctx } = await renderToCanvas(file, { flattenWhite: toExt === "jpg", maxDimension }, onProgress);
+  return encodeCanvas(canvas, ctx, toExt, quality, onProgress);
 }
 
 /* ------------------------- Spreadsheets (live) ---------------------------
@@ -370,10 +436,10 @@ async function convertSpreadsheet(file, fromExt, toExt, onProgress) {
    equivalent signal for the server-side conversion step, so progress eases
    forward there instead of claiming a percentage we don't have. */
 
-function convertViaCloud(file, toExt, onProgress) {
+function postToBackend(path, extraFields, file, fallbackFilename, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_BASE}/api/convert`);
+    xhr.open("POST", `${API_BASE}${path}`);
     xhr.responseType = "blob";
 
     let reported = 0;
@@ -397,7 +463,7 @@ function convertViaCloud(file, toExt, onProgress) {
         report(100);
         const disposition = xhr.getResponseHeader("Content-Disposition") || "";
         const match = /filename\*?=(?:UTF-8'')?"?([^;"]+)"?/i.exec(disposition);
-        const filename = match ? decodeURIComponent(match[1].replace(/"$/, "")) : `${baseName(file.name)}.${toExt}`;
+        const filename = match ? decodeURIComponent(match[1].replace(/"$/, "")) : fallbackFilename;
         resolve({ blob: xhr.response, filename });
         return;
       }
@@ -405,7 +471,7 @@ function convertViaCloud(file, toExt, onProgress) {
       // "blob" for the success path, so re-read the body as text.
       const reader = new FileReader();
       reader.onload = () => {
-        let message = `Conversion server returned ${xhr.status}.`;
+        let message = `Server returned ${xhr.status}.`;
         try {
           message = JSON.parse(reader.result)?.detail || message;
         } catch {
@@ -413,7 +479,7 @@ function convertViaCloud(file, toExt, onProgress) {
         }
         reject(new Error(message));
       };
-      reader.onerror = () => reject(new Error(`Conversion server returned ${xhr.status}.`));
+      reader.onerror = () => reject(new Error(`Server returned ${xhr.status}.`));
       reader.readAsText(xhr.response);
     };
 
@@ -425,10 +491,18 @@ function convertViaCloud(file, toExt, onProgress) {
     const form = new FormData();
     form.append("file", file, file.name);
     form.append("filename", file.name);
-    form.append("to_ext", toExt);
+    for (const [key, value] of Object.entries(extraFields)) form.append(key, value);
     report(2);
     xhr.send(form);
   });
+}
+
+function convertViaCloud(file, toExt, onProgress) {
+  return postToBackend("/api/convert", { to_ext: toExt }, file, `${baseName(file.name)}.${toExt}`, onProgress);
+}
+
+function compressViaCloud(file, category, level, onProgress) {
+  return postToBackend("/api/compress", { category, level }, file, file.name, onProgress);
 }
 
 /* --------------------------------- API ----------------------------------- */
@@ -450,6 +524,17 @@ export async function runConversion({ file, category, fromExt, toExt, onProgress
   }
 
   return { blob, filename: `${baseName(file.name)}.${toExt}` };
+}
+
+export async function runCompression({ file, category, toExt, quality, maxDimension, level, onProgress }) {
+  onProgress?.(2);
+
+  if (category.id === "images") {
+    const blob = await compressImage(file, toExt, quality, maxDimension, onProgress);
+    return { blob, filename: `${baseName(file.name)}-compressed.${toExt}` };
+  }
+
+  return compressViaCloud(file, category.id, level, onProgress);
 }
 
 export function triggerDownload(blob, filename) {

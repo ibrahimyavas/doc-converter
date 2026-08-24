@@ -1,8 +1,10 @@
 """Thin wrapper around the CloudConvert Python SDK.
 
-Handles the import/upload -> convert -> export/url task chain and
+Handles the import/upload -> process -> export/url task chain and
 downloads the result to a local temp file, so the FastAPI route only has
-to deal with plain file paths.
+to deal with plain file paths. "process" is either a `convert` task
+(format A -> format B) or an `optimize` task (format A -> smaller
+format A, used for PDF compression).
 """
 
 import os
@@ -39,26 +41,22 @@ def _ensure_configured() -> None:
         _configured = True
 
 
-def convert_file(input_path: str, original_filename: str, to_ext: str) -> tuple[str, str]:
-    """Convert the file at `input_path` via CloudConvert.
+def _run_job(input_path: str, original_filename: str, process_task: dict, out_ext: str) -> tuple[str, str]:
+    """Run an upload -> `process_task` -> export/url job and download the result.
 
-    Returns (output_path, output_filename). Caller owns the returned temp
-    file and is responsible for deleting it once the response is sent.
+    `process_task` is the middle task's body (an `operation: "convert"` or
+    `operation: "optimize"` dict); its `input` is filled in automatically.
+    Returns (output_path, output_filename); caller owns the temp file.
     """
     _ensure_configured()
-    to_ext = to_ext.lstrip(".").lower()
 
     try:
         job = cloudconvert.Job.create(
             payload={
                 "tasks": {
                     "upload-my-file": {"operation": "import/upload"},
-                    "convert-my-file": {
-                        "operation": "convert",
-                        "input": "upload-my-file",
-                        "output_format": to_ext,
-                    },
-                    "export-my-file": {"operation": "export/url", "input": "convert-my-file"},
+                    "process-my-file": {**process_task, "input": "upload-my-file"},
+                    "export-my-file": {"operation": "export/url", "input": "process-my-file"},
                 }
             }
         )
@@ -83,7 +81,7 @@ def convert_file(input_path: str, original_filename: str, to_ext: str) -> tuple[
         raise CloudConvertError("CloudConvert returned no output file.")
     remote = files[0]
 
-    out_fd, out_path = tempfile.mkstemp(suffix=f".{to_ext}")
+    out_fd, out_path = tempfile.mkstemp(suffix=f".{out_ext}")
     try:
         response = requests.get(remote["url"], timeout=120)
         response.raise_for_status()
@@ -100,5 +98,50 @@ def convert_file(input_path: str, original_filename: str, to_ext: str) -> tuple[
         os.unlink(out_path)
         raise
 
-    out_filename = remote.get("filename") or f"{Path(original_filename).stem}.{to_ext}"
+    out_filename = remote.get("filename") or f"{Path(original_filename).stem}.{out_ext}"
     return out_path, out_filename
+
+
+def convert_file(input_path: str, original_filename: str, to_ext: str) -> tuple[str, str]:
+    """Convert the file at `input_path` to `to_ext` via CloudConvert."""
+    to_ext = to_ext.lstrip(".").lower()
+    task = {"operation": "convert", "output_format": to_ext}
+    return _run_job(input_path, original_filename, task, to_ext)
+
+
+# PDF compression profiles, from gentlest to most aggressive. CloudConvert's
+# "optimize" operation only documents PDF/PNG/JPG as inputs — PDF is what we
+# use it for here.
+_PDF_PROFILES = {"light": "web", "strong": "max"}
+
+# Video compression has no dedicated "optimize" operation, so we re-run
+# `convert` with a lower target bitrate instead. Values are conservative
+# enough to noticeably shrink most source files without visibly wrecking
+# quality at "light", and prioritize size at "strong".
+_VIDEO_BITRATES = {"light": 1500, "strong": 600}  # kbit/s
+
+
+def compress_file(input_path: str, original_filename: str, category: str, level: str) -> tuple[str, str]:
+    """Compress a PDF or video file via CloudConvert.
+
+    `category` is "pdf" or "video"; `level` is "light" or "strong".
+    Output stays in the same format as the input — this shrinks a file,
+    it doesn't convert it.
+    """
+    ext = Path(original_filename).suffix.lstrip(".").lower()
+
+    if category == "pdf":
+        profile = _PDF_PROFILES.get(level)
+        if not profile:
+            raise CloudConvertError(f"Unknown PDF compression level: {level!r}")
+        task = {"operation": "optimize", "input_format": "pdf", "profile": profile}
+        return _run_job(input_path, original_filename, task, ext or "pdf")
+
+    if category == "video":
+        bitrate = _VIDEO_BITRATES.get(level)
+        if not bitrate:
+            raise CloudConvertError(f"Unknown video compression level: {level!r}")
+        task = {"operation": "convert", "output_format": ext, "video_bitrate": bitrate}
+        return _run_job(input_path, original_filename, task, ext)
+
+    raise CloudConvertError(f"Unknown compression category: {category!r}")
