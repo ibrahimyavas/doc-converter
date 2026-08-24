@@ -20,6 +20,11 @@ There's also a **Compress** section (same format in, smaller file out):
 | PDF | 🔵 Cloud | CloudConvert's `optimize` task (`web`/`max` profiles) |
 | Video | 🔵 Cloud | CloudConvert `convert` with a reduced target bitrate |
 
+...and a **Study** section: upload a PDF, extract its text client-side
+(`pdfjs-dist`), and get a 🟡 AI-generated summary, study guide, or
+flashcard set back via [OmniRoute](https://github.com/diegosouzapw/OmniRoute)
+— only the extracted text leaves your browser, never the PDF file itself.
+
 ## Structure
 
 ```

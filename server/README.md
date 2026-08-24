@@ -1,13 +1,20 @@
 # doc-converter backend
 
-A small FastAPI service that converts the frontend's "cloud" categories —
-**Documents** (PDF/Word/Text/PowerPoint/JPEG/Excel), **Video** (MP4/MOV),
-and **Audio** (MP3/WAV) — plus PDF/video **compression**, all via the
-[CloudConvert](https://cloudconvert.com) API. `/api/convert` is generic
-(it just forwards whatever `to_ext` it's given to CloudConvert), so
-adding more formats to those categories on the frontend needs no backend
-changes. The frontend's "live" categories (Spreadsheets, Images, and
-image compression) stay fully client-side and never touch this server.
+A small FastAPI service backing two independent features:
+
+1. **File conversion/compression** — the frontend's "cloud" categories
+   (**Documents**, **Video**, **Audio**) plus PDF/video **compression**,
+   all via the [CloudConvert](https://cloudconvert.com) API.
+   `/api/convert` is generic (it just forwards whatever `to_ext` it's
+   given to CloudConvert), so adding more formats to those categories on
+   the frontend needs no backend changes. The frontend's "live"
+   categories (Spreadsheets, Images, and image compression) stay fully
+   client-side and never touch this server.
+2. **PDF study tool** — `/api/study` turns text (already extracted
+   client-side with pdf.js — the PDF itself never reaches this server)
+   into a summary, study guide, or flashcard set via
+   [OmniRoute](https://github.com/diegosouzapw/OmniRoute), a self-hosted
+   AI gateway.
 
 ## Setup
 
@@ -28,6 +35,20 @@ Edit `.env` and set `CLOUDCONVERT_API_KEY`. Get a free key at
 https://cloudconvert.com/dashboard/api/v2/keys (no card required; free
 tier is ~25 conversion minutes/day).
 
+For the study tool, also install and run OmniRoute, then set
+`OMNIROUTE_API_KEY` (from its dashboard) in `.env`:
+
+```bash
+npm install -g omniroute
+omniroute   # serves on http://localhost:20128/v1
+```
+
+`OMNIROUTE_MODEL` defaults to `auto/best-chat`. OmniRoute's free-tier
+pool aggregates community providers and can be flaky (429s) — the
+backend retries once automatically, but if you hit persistent failures,
+add a provider API key via OmniRoute's own dashboard for a more reliable
+pool.
+
 ## Run
 
 ```bash
@@ -38,11 +59,11 @@ Check it's alive:
 
 ```bash
 curl http://localhost:8787/health
-# {"ok":true,"cloudconvert_configured":true}
+# {"ok":true,"cloudconvert_configured":true,"omniroute_configured":true}
 ```
 
-If `cloudconvert_configured` is `false`, the `/api/convert` endpoint
-returns `501` with a message telling you to set the API key — the
+If either `_configured` flag is `false`, the corresponding endpoint
+returns `501` with a message telling you to set the missing key — the
 frontend surfaces that as an inline error rather than failing silently.
 
 ## API
@@ -67,6 +88,16 @@ frontend surfaces that as an inline error rather than failing silently.
 Both return the file as a binary response with
 `Content-Disposition: attachment`, or a JSON `{"detail": "..."}` error
 body on failure (`501` not configured, `502` CloudConvert error).
+
+`POST /api/study` — JSON body:
+
+| field | type | description |
+|---|---|---|
+| `text` | string | extracted PDF text (truncated server-side to ~40k chars) |
+| `mode` | string | `summary`, `study_guide`, or `flashcards` |
+
+Returns `{"result": "...", "mode": "..."}`, or `{"detail": "..."}`
+(`501` not configured, `502` OmniRoute error, `400` empty text).
 
 ## Troubleshooting
 

@@ -503,6 +503,9 @@ a {
 .mode-dot.cloud {
   background: var(--color-accent-teal);
 }
+.mode-dot.ai {
+  background: var(--color-accent-amber);
+}
 
 .dropzone {
   display: flex;

@@ -9,6 +9,7 @@ load_dotenv()
 from fastapi import FastAPI, File, Form, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import FileResponse  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 from starlette.background import BackgroundTask  # noqa: E402
 
 from cloudconvert_service import (  # noqa: E402
@@ -16,6 +17,11 @@ from cloudconvert_service import (  # noqa: E402
     CloudConvertNotConfigured,
     compress_file,
     convert_file,
+)
+from omniroute_service import (  # noqa: E402
+    OmniRouteError,
+    OmniRouteNotConfigured,
+    generate_study_content,
 )
 
 app = FastAPI(title="doc-converter backend")
@@ -31,7 +37,11 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
-    return {"ok": True, "cloudconvert_configured": bool(os.getenv("CLOUDCONVERT_API_KEY"))}
+    return {
+        "ok": True,
+        "cloudconvert_configured": bool(os.getenv("CLOUDCONVERT_API_KEY")),
+        "omniroute_configured": bool(os.getenv("OMNIROUTE_API_KEY")),
+    }
 
 
 def _run_cloudconvert_job(file: bytes, filename: str, runner) -> FileResponse:
@@ -88,3 +98,25 @@ def compress(
 ):
     """Shrink a PDF or video file via CloudConvert (same format in and out)."""
     return _run_cloudconvert_job(file, filename, lambda path, name: compress_file(path, name, category, level))
+
+
+class StudyRequest(BaseModel):
+    text: str
+    mode: str  # "summary" | "study_guide" | "flashcards"
+
+
+@app.post("/api/study")
+def study(req: StudyRequest):
+    """Turn extracted PDF text into a summary/study guide/flashcards via
+    OmniRoute. The PDF itself never reaches this server — only whatever
+    text the frontend already extracted client-side with pdf.js.
+    """
+    if not req.text.strip():
+        raise HTTPException(status_code=400, detail="No text to work with — the PDF may be empty or image-only.")
+    try:
+        result = generate_study_content(req.text, req.mode)
+    except OmniRouteNotConfigured as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except OmniRouteError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"result": result, "mode": req.mode}
