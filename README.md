@@ -1,15 +1,16 @@
 # Convert
 
-A file converter for the pairs people actually convert most: **PDF ⇄ Word,
-Excel ⇄ SQL, JPEG ⇄ PNG, MP4 ⇄ MOV.** Vite + React frontend, FastAPI
-backend, light/dark theming, pastel design system.
+A file converter with five categories, each converting freely between
+every format it lists (pick From/To, or tap swap). Vite + React
+frontend, FastAPI backend, light/dark theming, pastel design system.
 
-| Pair | Mode | How |
-|---|---|---|
-| Excel ⇄ SQL | 🟢 Live | Parses/generates fully client-side via `xlsx` |
-| JPEG ⇄ PNG | 🟢 Live | Re-encoded fully client-side via `<canvas>` |
-| PDF ⇄ Word | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
-| MP4 ⇄ MOV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Category | Formats | Mode | How |
+|---|---|---|---|
+| Documents | PDF, Word, Text, PowerPoint | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Spreadsheets | Excel, CSV, JSON, SQL | 🟢 Live | Parsed/generated fully client-side via `xlsx` |
+| Images | JPEG, PNG, WEBP, BMP | 🟢 Live | Re-encoded fully client-side via `<canvas>` (BMP hand-encoded — no browser supports BMP export natively) |
+| Video | MP4, MOV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
+| Audio | MP3, WAV | 🔵 Cloud | Uploaded to `server/`, converted via CloudConvert |
 
 ## Structure
 

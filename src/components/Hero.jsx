@@ -1,10 +1,11 @@
-import { FileText, Table, Image, Video, ArrowRight } from "lucide-react";
+import { FileText, Table, Image, Video, Music, ArrowRight } from "lucide-react";
 
 const PAIRS = [
   { Icon: FileText, from: "PDF", to: "DOCX" },
   { Icon: Table, from: "XLSX", to: "SQL" },
-  { Icon: Image, from: "JPG", to: "PNG" },
+  { Icon: Image, from: "JPG", to: "WEBP" },
   { Icon: Video, from: "MP4", to: "MOV" },
+  { Icon: Music, from: "MP3", to: "WAV" },
 ];
 
 export default function Hero() {
@@ -14,9 +15,9 @@ export default function Hero() {
         <div className="hero-copy">
           <h1 className="display-xl">Convert any file. Right in your browser.</h1>
           <p>
-            PDF ⇄ Word, Excel ⇄ SQL, JPEG ⇄ PNG, MP4 ⇄ MOV — one clean tool for
-            the formats you convert most. No account, no upload to a stranger's
-            server for the formats marked <em>live</em>.
+            Documents, spreadsheets, images, video, audio — five categories, every
+            format converts to every other format in its group. No account, no
+            upload to a stranger's server for the formats marked <em>live</em>.
           </p>
           <div className="hero-actions">
             <a href="#converter" className="btn btn-primary">

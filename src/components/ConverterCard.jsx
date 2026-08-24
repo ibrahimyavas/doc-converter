@@ -4,10 +4,12 @@ import {
   Table,
   Image,
   Video,
+  Music,
   UploadCloud,
   X,
   Download,
   RefreshCw,
+  ChevronDown,
   Loader2,
   CheckCircle2,
   AlertTriangle,
@@ -15,11 +17,14 @@ import {
 } from "lucide-react";
 import { CATEGORIES, runConversion, triggerDownload, formatBytes } from "../lib/converters.js";
 
-const ICONS = { FileText, Table, Image, Video };
+const ICONS = { FileText, Table, Image, Video, Music };
 
 export default function ConverterCard() {
   const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
-  const [flipped, setFlipped] = useState(false);
+  const category = CATEGORIES.find((c) => c.id === categoryId);
+
+  const [fromExt, setFromExt] = useState(category.formats[0].ext);
+  const [toExt, setToExt] = useState(category.formats[1].ext);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | converting | done | error
@@ -28,14 +33,12 @@ export default function ConverterCard() {
   const [error, setError] = useState("");
   const inputRef = useRef(null);
 
-  const category = CATEGORIES.find((c) => c.id === categoryId);
-  const fromIdx = flipped ? 1 : 0;
-  const toIdx = flipped ? 0 : 1;
-  const fromLabel = category.pair[fromIdx];
-  const toLabel = category.pair[toIdx];
-  const fromExt = category.extPair[fromIdx];
-  const toExt = category.extPair[toIdx];
-  const accept = category.acceptPair[fromIdx];
+  const fromFormat = category.formats.find((f) => f.ext === fromExt);
+  const toFormat = category.formats.find((f) => f.ext === toExt);
+  // Each dropdown excludes whatever the other one currently holds — makes
+  // "from === to" structurally impossible instead of something to guard.
+  const fromOptions = category.formats.filter((f) => f.ext !== toExt);
+  const toOptions = category.formats.filter((f) => f.ext !== fromExt);
 
   function resetTool() {
     setFile(null);
@@ -46,13 +49,16 @@ export default function ConverterCard() {
   }
 
   function selectCategory(id) {
+    const next = CATEGORIES.find((c) => c.id === id);
     setCategoryId(id);
-    setFlipped(false);
+    setFromExt(next.formats[0].ext);
+    setToExt(next.formats[1].ext);
     resetTool();
   }
 
   function flip() {
-    setFlipped((f) => !f);
+    setFromExt(toExt);
+    setToExt(fromExt);
     resetTool();
   }
 
@@ -112,11 +118,45 @@ export default function ConverterCard() {
           </div>
 
           <div className="direction-row">
-            <span className="format-pill">{fromLabel}</span>
+            <div className="format-select-wrap">
+              <select
+                className="format-select"
+                value={fromExt}
+                onChange={(e) => {
+                  setFromExt(e.target.value);
+                  resetTool();
+                }}
+                aria-label="Convert from"
+              >
+                {fromOptions.map((f) => (
+                  <option key={f.ext} value={f.ext}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="format-select-chevron" />
+            </div>
             <button className="swap-btn" onClick={flip} aria-label="Swap direction" title="Swap direction">
               <RefreshCw size={16} />
             </button>
-            <span className="format-pill">{toLabel}</span>
+            <div className="format-select-wrap">
+              <select
+                className="format-select"
+                value={toExt}
+                onChange={(e) => {
+                  setToExt(e.target.value);
+                  resetTool();
+                }}
+                aria-label="Convert to"
+              >
+                {toOptions.map((f) => (
+                  <option key={f.ext} value={f.ext}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="format-select-chevron" />
+            </div>
           </div>
 
           <div className="mode-badge">
@@ -138,15 +178,15 @@ export default function ConverterCard() {
             >
               <UploadCloud size={28} className="dropzone-icon" />
               <div className="title-sm" style={{ marginBottom: 4 }}>
-                Drop a {fromLabel} file here, or click to browse
+                Drop a {fromFormat.label} file here, or click to browse
               </div>
               <div className="body-sm" style={{ color: "var(--color-muted)" }}>
-                Accepted: {accept.replaceAll(",", ", ")}
+                Accepted: {fromFormat.accept.replaceAll(",", ", ")}
               </div>
               <input
                 ref={inputRef}
                 type="file"
-                accept={accept}
+                accept={fromFormat.accept}
                 onChange={(e) => handleFile(e.target.files?.[0])}
               />
             </label>
@@ -224,7 +264,7 @@ export default function ConverterCard() {
             )}
             {status !== "done" && file && status !== "converting" && (
               <button className="btn btn-primary" onClick={convert}>
-                Convert to {toLabel}
+                Convert to {toFormat.label}
               </button>
             )}
           </div>

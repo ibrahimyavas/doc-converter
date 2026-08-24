@@ -1,9 +1,13 @@
 # doc-converter backend
 
-A small FastAPI service that converts PDF ⇄ Word and MP4 ⇄ MOV via the
-[CloudConvert](https://cloudconvert.com) API. The frontend's other two
-pairs (Excel ⇄ SQL, JPEG ⇄ PNG) stay fully client-side and never touch
-this server.
+A small FastAPI service that converts the frontend's "cloud" categories —
+**Documents** (PDF/Word/Text/PowerPoint), **Video** (MP4/MOV), and
+**Audio** (MP3/WAV) — via the [CloudConvert](https://cloudconvert.com)
+API. `/api/convert` is generic (it just forwards whatever `to_ext` it's
+given to CloudConvert), so adding more formats to those categories on
+the frontend needs no backend changes. The frontend's "live" categories
+(Spreadsheets, Images) stay fully client-side and never touch this
+server.
 
 ## Setup
 

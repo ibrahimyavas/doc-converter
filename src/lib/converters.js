@@ -5,52 +5,75 @@ function loadXlsx() {
   return (_xlsxPromise ??= import("xlsx"));
 }
 
-// Each category holds exactly one format pair; `flip` toggles direction.
+// Each category lists every format it supports; the UI renders two
+// dropdowns (From / To) rather than a fixed pair, so any format can
+// convert to any other format in the same category.
 // mode: "live"  = real conversion, runs fully in the browser, file never
 //                 leaves the machine.
 //       "cloud" = real conversion, but goes through our FastAPI backend
 //                 (server/) which calls CloudConvert. The file is
-//                 uploaded to that server for this pair only.
+//                 uploaded to that server for this category only.
 export const CATEGORIES = [
   {
     id: "documents",
     label: "Documents",
     icon: "FileText",
-    pair: ["PDF", "Word"],
-    extPair: ["pdf", "docx"],
-    acceptPair: [".pdf", ".docx,.doc"],
     mode: "cloud",
-    description: "PDF and Word, back and forth.",
+    description: "PDF, Word, plain text, and slides, any direction.",
+    formats: [
+      { ext: "pdf", label: "PDF", accept: ".pdf" },
+      { ext: "docx", label: "Word", accept: ".docx,.doc" },
+      { ext: "txt", label: "Text", accept: ".txt" },
+      { ext: "pptx", label: "PowerPoint", accept: ".pptx,.ppt" },
+    ],
   },
   {
     id: "spreadsheets",
     label: "Spreadsheets",
     icon: "Table",
-    pair: ["Excel", "SQL"],
-    extPair: ["xlsx", "sql"],
-    acceptPair: [".xlsx,.xls,.csv", ".sql"],
     mode: "live",
-    description: "Excel workbooks into INSERT statements, and back.",
+    description: "Excel, CSV, JSON, and SQL — all convert through each other.",
+    formats: [
+      { ext: "xlsx", label: "Excel", accept: ".xlsx,.xls" },
+      { ext: "csv", label: "CSV", accept: ".csv" },
+      { ext: "json", label: "JSON", accept: ".json" },
+      { ext: "sql", label: "SQL", accept: ".sql" },
+    ],
   },
   {
     id: "images",
     label: "Images",
     icon: "Image",
-    pair: ["JPEG", "PNG"],
-    extPair: ["jpg", "png"],
-    acceptPair: [".jpg,.jpeg", ".png"],
     mode: "live",
     description: "Lossless, pixel-accurate re-encoding in your browser.",
+    formats: [
+      { ext: "jpg", label: "JPEG", accept: ".jpg,.jpeg" },
+      { ext: "png", label: "PNG", accept: ".png" },
+      { ext: "webp", label: "WEBP", accept: ".webp" },
+      { ext: "bmp", label: "BMP", accept: ".bmp" },
+    ],
   },
   {
     id: "video",
     label: "Video",
     icon: "Video",
-    pair: ["MP4", "MOV"],
-    extPair: ["mp4", "mov"],
-    acceptPair: [".mp4", ".mov"],
     mode: "cloud",
     description: "MP4 and MOV containers, both directions.",
+    formats: [
+      { ext: "mp4", label: "MP4", accept: ".mp4" },
+      { ext: "mov", label: "MOV", accept: ".mov" },
+    ],
+  },
+  {
+    id: "audio",
+    label: "Audio",
+    icon: "Music",
+    mode: "cloud",
+    description: "MP3 and WAV, both directions.",
+    formats: [
+      { ext: "mp3", label: "MP3", accept: ".mp3" },
+      { ext: "wav", label: "WAV", accept: ".wav" },
+    ],
   },
 ];
 
@@ -73,6 +96,50 @@ function download(blob, filename) {
 }
 
 /* ---------------------------- Images (live) ---------------------------- */
+// jpg/png/webp/bmp, any direction. Decoding all four is native browser
+// <img> support; encoding jpg/png/webp goes through canvas.toBlob, but no
+// browser's toBlob supports "image/bmp" — so BMP output is hand-encoded
+// from raw pixel data below.
+
+function encodeBmp(imageData) {
+  const { width, height, data } = imageData;
+  const rowSize = Math.ceil((width * 3) / 4) * 4; // rows pad to a 4-byte boundary
+  const pixelArraySize = rowSize * height;
+  const fileSize = 54 + pixelArraySize;
+  const buffer = new ArrayBuffer(fileSize);
+  const view = new DataView(buffer);
+
+  // BITMAPFILEHEADER
+  view.setUint8(0, 0x42); // 'B'
+  view.setUint8(1, 0x4d); // 'M'
+  view.setUint32(2, fileSize, true);
+  view.setUint32(10, 54, true); // pixel data offset
+
+  // BITMAPINFOHEADER
+  view.setUint32(14, 40, true);
+  view.setInt32(18, width, true);
+  view.setInt32(22, height, true); // positive height = bottom-up rows
+  view.setUint16(26, 1, true); // color planes
+  view.setUint16(28, 24, true); // bits per pixel
+  view.setUint32(34, pixelArraySize, true);
+  view.setInt32(38, 2835, true); // ~72dpi
+  view.setInt32(42, 2835, true);
+
+  let offset = 54;
+  for (let y = height - 1; y >= 0; y--) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      view.setUint8(offset++, data[i + 2]); // B
+      view.setUint8(offset++, data[i + 1]); // G
+      view.setUint8(offset++, data[i]); // R
+    }
+    for (let p = 0; p < rowSize - width * 3; p++) view.setUint8(offset++, 0);
+  }
+
+  return new Blob([buffer], { type: "image/bmp" });
+}
+
+const CANVAS_MIME = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
 function convertImage(file, toExt, onProgress) {
   return new Promise((resolve, reject) => {
@@ -93,14 +160,25 @@ function convertImage(file, toExt, onProgress) {
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         ctx.drawImage(img, 0, 0);
-        const mime = toExt === "jpg" ? "image/jpeg" : "image/png";
+
+        if (toExt === "bmp") {
+          try {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            onProgress?.(100);
+            resolve(encodeBmp(imageData));
+          } catch (err) {
+            reject(new Error(`Could not encode BMP: ${err.message}`));
+          }
+          return;
+        }
+
         canvas.toBlob(
           (blob) => {
             onProgress?.(100);
-            if (!blob) return reject(new Error("Canvas export failed."));
+            if (!blob) return reject(new Error(`Your browser can't export ${toExt.toUpperCase()} images.`));
             resolve(blob);
           },
-          mime,
+          CANVAS_MIME[toExt],
           0.92
         );
       };
@@ -112,7 +190,11 @@ function convertImage(file, toExt, onProgress) {
   });
 }
 
-/* ------------------------- Excel → SQL (live) --------------------------- */
+/* ------------------------- Spreadsheets (live) ---------------------------
+   xlsx/csv/json/sql all convert through a shared intermediate shape:
+     Table = { name: string, headers: string[], rows: any[][] }
+   parseToTables() reads any supported format into Table[]; the
+   tablesTo*Blob() functions write Table[] back out to any of them. */
 
 function sqlLiteral(value) {
   if (value === null || value === undefined || value === "") return "NULL";
@@ -121,53 +203,21 @@ function sqlLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-async function convertExcelToSql(file, onProgress) {
-  onProgress?.(10);
-  const XLSX = await loadXlsx();
-  const buf = await file.arrayBuffer();
-  onProgress?.(30);
-  const workbook = XLSX.read(buf, { type: "array" });
-  onProgress?.(55);
-
-  const chunks = [];
-  workbook.SheetNames.forEach((sheetName) => {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, blankrows: false });
-    if (!rows.length) return;
-
-    const tableName = sheetName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase() || "sheet1";
-    const headers = rows[0].map((h, i) => (h ? String(h).replace(/[^a-zA-Z0-9_]/g, "_") : `col_${i + 1}`));
-    const dataRows = rows.slice(1);
-
-    chunks.push(`-- Table generated from sheet "${sheetName}"`);
-    chunks.push(`CREATE TABLE IF NOT EXISTS \`${tableName}\` (`);
-    chunks.push(headers.map((h) => `  \`${h}\` TEXT`).join(",\n"));
-    chunks.push(`);\n`);
-
-    dataRows.forEach((row) => {
-      const values = headers.map((_, i) => sqlLiteral(row[i]));
-      chunks.push(`INSERT INTO \`${tableName}\` (${headers.map((h) => `\`${h}\``).join(", ")}) VALUES (${values.join(", ")});`);
-    });
-    chunks.push("");
-  });
-
-  onProgress?.(90);
-  const text = chunks.join("\n") || "-- The workbook had no rows to convert.\n";
-  onProgress?.(100);
-  return new Blob([text], { type: "application/sql" });
+function sheetToTable(XLSX, sheet, name) {
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, blankrows: false });
+  const headers = (rows[0] || []).map((h, i) => (h ? String(h) : `col_${i + 1}`));
+  return { name, headers, rows: rows.slice(1) };
 }
 
-/* ------------------------- SQL → Excel (live) ---------------------------- */
+function parseSqlToTables(text) {
+  const tables = new Map(); // name -> { headers, rows }
 
-async function convertSqlToExcel(file, onProgress) {
-  onProgress?.(10);
-  const XLSX = await loadXlsx();
-  const text = await file.text();
-  onProgress?.(30);
-
-  const tables = new Map(); // tableName -> { headers: [], rows: [] }
-
-  const createRe = /CREATE\s+TABLE[^(]*`?(\w+)`?\s*\(([^;]+)\)\s*;/gis;
+  // NOTE: the prefix must be lazy (*?) — greedy [^(]* over-consumes past the
+  // table name, then backtracking settles for the *minimal* match that still
+  // satisfies the rest of the pattern, which is just the identifier's last
+  // character (e.g. captures "e" out of "people"). Lazy stops at the first
+  // position where the whole pattern succeeds, i.e. right at the real name.
+  const createRe = /CREATE\s+TABLE[^(]*?`?(\w+)`?\s*\(([^;]+)\)\s*;/gis;
   let m;
   while ((m = createRe.exec(text))) {
     const [, table, colsBlock] = m;
@@ -177,7 +227,6 @@ async function convertSqlToExcel(file, onProgress) {
       .filter(Boolean);
     if (!tables.has(table)) tables.set(table, { headers, rows: [] });
   }
-  onProgress?.(50);
 
   const insertRe = /INSERT\s+INTO\s+`?(\w+)`?\s*(?:\(([^)]+)\))?\s*VALUES\s*\(([^;]+)\)\s*;/gis;
   while ((m = insertRe.exec(text))) {
@@ -188,9 +237,8 @@ async function convertSqlToExcel(file, onProgress) {
       entry.headers = colsRaw.split(",").map((c) => c.trim().replace(/`/g, ""));
     }
     // naive split on top-level commas (values are simple literals in our own export)
-    const values = valuesRaw
-      .match(/'(?:[^'\\]|\\.)*'|[^,]+/g)
-      ?.map((v) => {
+    const values =
+      valuesRaw.match(/'(?:[^'\\]|\\.)*'|[^,]+/g)?.map((v) => {
         const t = v.trim();
         if (t.toUpperCase() === "NULL") return null;
         if (/^'.*'$/.test(t)) return t.slice(1, -1).replace(/''/g, "'");
@@ -199,31 +247,129 @@ async function convertSqlToExcel(file, onProgress) {
       }) ?? [];
     entry.rows.push(values);
   }
-  onProgress?.(75);
 
-  const workbook = XLSX.utils.book_new();
-  if (tables.size === 0) {
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["No CREATE TABLE / INSERT statements found"]]), "Sheet1");
-  } else {
-    for (const [table, { headers, rows }] of tables) {
-      const aoa = [headers.length ? headers : rows[0]?.map((_, i) => `col_${i + 1}`) ?? [], ...rows];
-      const sheet = XLSX.utils.aoa_to_sheet(aoa);
-      XLSX.utils.book_append_sheet(workbook, sheet, table.slice(0, 31));
-    }
+  return [...tables.entries()].map(([name, { headers, rows }]) => ({
+    name,
+    headers: headers.length ? headers : rows[0]?.map((_, i) => `col_${i + 1}`) ?? [],
+    rows,
+  }));
+}
+
+async function parseToTables(file, fromExt) {
+  if (fromExt === "xlsx") {
+    const XLSX = await loadXlsx();
+    const buf = await file.arrayBuffer();
+    const workbook = XLSX.read(buf, { type: "array" });
+    return workbook.SheetNames.map((name) => sheetToTable(XLSX, workbook.Sheets[name], name)).filter(
+      (t) => t.rows.length || t.headers.length
+    );
   }
-  onProgress?.(92);
+
+  if (fromExt === "csv") {
+    const XLSX = await loadXlsx();
+    const text = await file.text();
+    const workbook = XLSX.read(text, { type: "string" });
+    const name = workbook.SheetNames[0];
+    return [sheetToTable(XLSX, workbook.Sheets[name], baseName(file.name) || name)];
+  }
+
+  if (fromExt === "json") {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const toTable = (name, arr) => {
+      const rowsArr = Array.isArray(arr) ? arr : [arr];
+      const headerSet = new Set();
+      rowsArr.forEach((obj) => obj && typeof obj === "object" && Object.keys(obj).forEach((k) => headerSet.add(k)));
+      const headers = [...headerSet];
+      const rows = rowsArr.map((obj) => headers.map((h) => (obj ? obj[h] ?? null : null)));
+      return { name, headers, rows };
+    };
+    if (Array.isArray(data)) return [toTable(baseName(file.name) || "table", data)];
+    const values = Object.values(data);
+    const isMultiTable = values.length > 0 && values.every((v) => Array.isArray(v));
+    if (isMultiTable) return Object.entries(data).map(([name, arr]) => toTable(name, arr));
+    return [toTable(baseName(file.name) || "table", data)];
+  }
+
+  if (fromExt === "sql") {
+    return parseSqlToTables(await file.text());
+  }
+
+  throw new Error(`Don't know how to read .${fromExt} files.`);
+}
+
+function tablesToXlsxBlob(XLSX, tables) {
+  const workbook = XLSX.utils.book_new();
+  if (!tables.length) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["No data found"]]), "Sheet1");
+  } else {
+    tables.forEach(({ name, headers, rows }) => {
+      const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      XLSX.utils.book_append_sheet(workbook, sheet, (name || "Sheet1").slice(0, 31));
+    });
+  }
   const out = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
-  onProgress?.(100);
   return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-/* ----------------------- PDF⇄Word, MP4⇄MOV (cloud) ----------------------- */
+function tablesToCsvBlob(XLSX, tables) {
+  // CSV is inherently single-table — export the first sheet/table found.
+  const { headers = [], rows = [] } = tables[0] || {};
+  const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  return new Blob([XLSX.utils.sheet_to_csv(sheet)], { type: "text/csv" });
+}
 
-// Goes through our FastAPI backend, which relays to CloudConvert. Uses
-// XMLHttpRequest (not fetch) specifically for `xhr.upload.onprogress` — the
-// only way to get a real upload progress signal in the browser. There's no
-// equivalent signal for the server-side conversion step, so progress eases
-// forward there instead of claiming a percentage we don't have.
+function tablesToJsonBlob(tables) {
+  const toObjects = ({ headers, rows }) => rows.map((row) => Object.fromEntries(headers.map((h, i) => [h, row[i] ?? null])));
+  const payload = tables.length === 1 ? toObjects(tables[0]) : Object.fromEntries(tables.map((t) => [t.name, toObjects(t)]));
+  return new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+}
+
+function tablesToSqlBlob(tables) {
+  const chunks = [];
+  tables.forEach(({ name, headers, rows }) => {
+    const tableName = (name || "table1").replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase() || "table1";
+    const cols = headers.map((h, i) => (h ? String(h).replace(/[^a-zA-Z0-9_]/g, "_") : `col_${i + 1}`));
+    chunks.push(`-- Table generated from "${name}"`);
+    chunks.push(`CREATE TABLE IF NOT EXISTS \`${tableName}\` (`);
+    chunks.push(cols.map((c) => `  \`${c}\` TEXT`).join(",\n"));
+    chunks.push(`);\n`);
+    rows.forEach((row) => {
+      const values = cols.map((_, i) => sqlLiteral(row[i]));
+      chunks.push(`INSERT INTO \`${tableName}\` (${cols.map((c) => `\`${c}\``).join(", ")}) VALUES (${values.join(", ")});`);
+    });
+    chunks.push("");
+  });
+  return new Blob([chunks.join("\n") || "-- No data to export.\n"], { type: "application/sql" });
+}
+
+async function convertSpreadsheet(file, fromExt, toExt, onProgress) {
+  onProgress?.(15);
+  const tables = await parseToTables(file, fromExt);
+  onProgress?.(60);
+
+  let blob;
+  if (toExt === "xlsx" || toExt === "csv") {
+    const XLSX = await loadXlsx();
+    blob = toExt === "xlsx" ? tablesToXlsxBlob(XLSX, tables) : tablesToCsvBlob(XLSX, tables);
+  } else if (toExt === "json") {
+    blob = tablesToJsonBlob(tables);
+  } else if (toExt === "sql") {
+    blob = tablesToSqlBlob(tables);
+  } else {
+    throw new Error(`Don't know how to write .${toExt} files.`);
+  }
+  onProgress?.(100);
+  return blob;
+}
+
+/* --------------------- Documents, Video, Audio (cloud) -------------------
+   Goes through our FastAPI backend, which relays to CloudConvert. Uses
+   XMLHttpRequest (not fetch) specifically for `xhr.upload.onprogress` — the
+   only way to get a real upload progress signal in the browser. There's no
+   equivalent signal for the server-side conversion step, so progress eases
+   forward there instead of claiming a percentage we don't have. */
+
 function convertViaCloud(file, toExt, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -297,10 +443,10 @@ export async function runConversion({ file, category, fromExt, toExt, onProgress
   let blob;
   if (category.id === "images") {
     blob = await convertImage(file, toExt, onProgress);
-  } else if (category.id === "spreadsheets" && toExt === "sql") {
-    blob = await convertExcelToSql(file, onProgress);
+  } else if (category.id === "spreadsheets") {
+    blob = await convertSpreadsheet(file, fromExt, toExt, onProgress);
   } else {
-    blob = await convertSqlToExcel(file, onProgress);
+    throw new Error(`No client-side converter registered for "${category.id}".`);
   }
 
   return { blob, filename: `${baseName(file.name)}.${toExt}` };

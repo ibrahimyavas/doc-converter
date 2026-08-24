@@ -17,15 +17,16 @@ export default function Footer() {
           </div>
           <div className="footer-col">
             <h4>Formats</h4>
-            <a href="#converter">PDF ⇄ Word</a>
-            <a href="#converter">Excel ⇄ SQL</a>
-            <a href="#converter">JPEG ⇄ PNG</a>
-            <a href="#converter">MP4 ⇄ MOV</a>
+            <a href="#converter">Documents</a>
+            <a href="#converter">Spreadsheets</a>
+            <a href="#converter">Images</a>
+            <a href="#converter">Video</a>
+            <a href="#converter">Audio</a>
           </div>
           <div className="footer-col">
             <h4>Status</h4>
             <span className="body-sm" style={{ color: "var(--color-on-dark-soft)" }}>
-              2 pairs live in-browser, 2 pairs via cloud
+              2 categories live in-browser, 3 via cloud
             </span>
           </div>
           <div className="footer-col">

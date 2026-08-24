@@ -1,15 +1,15 @@
-import { FileText, Table, Image, Video } from "lucide-react";
+import { FileText, Table, Image, Video, Music } from "lucide-react";
 import { CATEGORIES } from "../lib/converters.js";
 
-const ICONS = { FileText, Table, Image, Video };
+const ICONS = { FileText, Table, Image, Video, Music };
 
 export default function FeatureGrid() {
   return (
     <section className="section" id="formats" style={{ paddingTop: 0 }}>
       <div className="container">
         <div className="section-heading">
-          <h2 className="display-lg">Four format pairs, one workflow</h2>
-          <p>Every category converts both directions from the same card — just tap the swap icon.</p>
+          <h2 className="display-lg">Five categories, any direction</h2>
+          <p>Pick a category, choose From and To, tap the swap icon whenever you'd rather go the other way.</p>
         </div>
         <div className="feature-grid">
           {CATEGORIES.map((c) => {
@@ -19,9 +19,7 @@ export default function FeatureGrid() {
                 <div className="feature-card-icon">
                   <Icon size={20} />
                 </div>
-                <h3>
-                  {c.pair[0]} ⇄ {c.pair[1]}
-                </h3>
+                <h3>{c.formats.map((f) => f.label).join(" ⇄ ")}</h3>
                 <p>{c.description}</p>
                 <span className="badge-pill">
                   <span className={`mode-dot ${c.mode}`} style={{ marginRight: 2 }} />
