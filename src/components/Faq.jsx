@@ -1,11 +1,11 @@
 const ITEMS = [
   {
     q: "Do my files leave my computer?",
-    a: "For the categories marked \"Live\" (Spreadsheets, Images) — no, everything runs in this browser tab. For \"Cloud\" categories (Documents, Video, Audio) your file is uploaded to our conversion server, converted via CloudConvert, and the result is streamed straight back — nothing is stored afterward.",
+    a: "For the categories marked \"Live\" (Spreadsheets, Images) — no, everything runs in this browser tab. For \"Cloud\" categories (Documents, Video, Audio) your file is uploaded to our own conversion server, converted locally there, and the result is streamed straight back — nothing is stored afterward, and no third-party conversion API ever sees it.",
   },
   {
     q: "How does the cloud conversion work?",
-    a: "Documents, video, and audio need heavier tooling than a browser can run — a document engine and ffmpeg respectively. Those categories route through a small FastAPI server we run, which calls the CloudConvert API and streams the converted file back to you.",
+    a: "Documents, video, and audio need heavier tooling than a browser can run. Those categories route through a small FastAPI server we run, which shells out to real local tools — ffmpeg for video/audio, LibreOffice + Poppler for documents — and streams the result back to you. Fully self-hosted, no cloud conversion API involved.",
   },
   {
     q: "What happens to my Excel formulas when converting to SQL, CSV, or JSON?",

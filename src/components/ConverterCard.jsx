@@ -249,9 +249,10 @@ export default function ConverterCard() {
             <div className="note-banner">
               <Info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
               <span>
-                This pair uploads your file to our conversion server, which calls CloudConvert and streams the result
-                straight back — nothing is stored. If it fails with a 501, the server is running but needs a
-                CloudConvert API key (see <code style={{ fontFamily: "var(--font-code)" }}>server/README.md</code>).
+                This pair uploads your file to our conversion server, which converts it locally (ffmpeg /
+                LibreOffice / Poppler) and streams the result straight back — nothing is stored, and no third-party
+                API is involved. If it fails with a 501, a required tool isn't installed — see{" "}
+                <code style={{ fontFamily: "var(--font-code)" }}>server/README.md</code>.
               </span>
             </div>
           )}

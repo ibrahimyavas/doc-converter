@@ -266,9 +266,9 @@ export default function CompressCard() {
             <div className="note-banner">
               <Info size={14} style={{ marginTop: 2, flexShrink: 0 }} />
               <span>
-                This uploads your file to our conversion server, which calls CloudConvert and streams the result
-                straight back — nothing is stored. Needs a CloudConvert API key on the backend (see{" "}
-                <code style={{ fontFamily: "var(--font-code)" }}>server/README.md</code>).
+                This uploads your file to our conversion server, which shrinks it locally (mutool / ffmpeg) and
+                streams the result straight back — nothing is stored, no third-party API involved. See{" "}
+                <code style={{ fontFamily: "var(--font-code)" }}>server/README.md</code> if it fails with a 501.
               </span>
             </div>
           )}

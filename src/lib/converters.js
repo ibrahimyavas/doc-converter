@@ -11,8 +11,9 @@ function loadXlsx() {
 // mode: "live"  = real conversion, runs fully in the browser, file never
 //                 leaves the machine.
 //       "cloud" = real conversion, but goes through our FastAPI backend
-//                 (server/) which calls CloudConvert. The file is
-//                 uploaded to that server for this category only.
+//                 (server/), which runs local tools (ffmpeg, LibreOffice,
+//                 Poppler) — no third-party API, fully self-hosted. The
+//                 file is uploaded to that server for this category only.
 export const CATEGORIES = [
   {
     id: "documents",
@@ -115,7 +116,7 @@ export const COMPRESS_CATEGORIES = [
     label: "PDF",
     icon: "FileText",
     mode: "cloud",
-    description: "Shrink file size via CloudConvert's PDF optimizer.",
+    description: "Shrink file size via our server's mutool-based PDF optimizer.",
     accept: ".pdf",
   },
   {
@@ -123,7 +124,7 @@ export const COMPRESS_CATEGORIES = [
     label: "Video",
     icon: "Video",
     mode: "cloud",
-    description: "Re-encode at a lower bitrate via CloudConvert.",
+    description: "Re-encode at a lower bitrate via our server's ffmpeg.",
     accept: ".mp4,.mov",
   },
 ];
@@ -441,11 +442,12 @@ async function convertSpreadsheet(file, fromExt, toExt, onProgress) {
 }
 
 /* --------------------- Documents, Video, Audio (cloud) -------------------
-   Goes through our FastAPI backend, which relays to CloudConvert. Uses
-   XMLHttpRequest (not fetch) specifically for `xhr.upload.onprogress` — the
-   only way to get a real upload progress signal in the browser. There's no
-   equivalent signal for the server-side conversion step, so progress eases
-   forward there instead of claiming a percentage we don't have. */
+   Goes through our FastAPI backend, which converts locally (ffmpeg /
+   LibreOffice / Poppler — no third-party API). Uses XMLHttpRequest (not
+   fetch) specifically for `xhr.upload.onprogress` — the only way to get a
+   real upload progress signal in the browser. There's no equivalent
+   signal for the server-side conversion step, so progress eases forward
+   there instead of claiming a percentage we don't have. */
 
 function postToBackend(path, extraFields, file, fallbackFilename, onProgress) {
   return new Promise((resolve, reject) => {
